@@ -1,0 +1,55 @@
+version: '3.9'
+services:
+  appdb:
+    image: 'mariadb:10.4.25'
+    environment:
+      - MARIADB_ROOT_PASSWORD=123456
+      - MARIADB_USER=appdb
+      - MARIADB_DATABASE=appdb
+      - MARIADB_PASSWORD=123456
+    ports:
+      - '21002:3306'
+      - '21003:33060'
+    volumes:
+      - 'dbdata:/var/lib/mysql'
+
+  php:
+    build:
+      context: docker/php
+    volumes:
+      - './:/var/www'
+      - './docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini'
+      - './docker/php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini'
+      - 'phpsocket:/var/run'
+    ports:
+      - '5173:5173'
+    depends_on:
+      - appdb
+
+  web:
+    image: 'nginx:stable-alpine'
+    ports:
+      - '21000:80'
+      - '21001:443'
+    volumes:
+      - './:/var/www'
+      - './docker/nginx:/etc/nginx/conf.d/'
+      - 'phpsocket:/var/run'
+    depends_on:
+      - php
+
+  phpmyadmin:
+    image: 'phpmyadmin/phpmyadmin:latest'
+    environment:
+      - PMA_HOST=appdb
+      - PMA_USER=appdb
+      - PMA_PASSWORD=123456
+    ports:
+      - '21005:80'
+    depends_on:
+      - appdb
+
+volumes:
+    phpsocket:
+    dbdata:
+      driver: local
